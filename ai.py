@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import requests
 from typing import Optional
 import os
+import json
 
 load_dotenv()
 
@@ -11,6 +12,25 @@ LANGFLOW_ID = "3c8795f4-3632-49b1-b7c0-302e1629c5cf"
 APPLICATION_TOKEN = os.getenv("LANGFLOW_TOKEN")
 
 
+def dict_to_string(obj, level=0):
+  strings = []
+  indent = "  " * level
+  
+  if isinstance(obj, dict):
+      for key, value in obj.items():
+          if isinstance(value, (dict, list)):
+              nested_string = dict_to_string(value, level + 1)
+              strings.append(f"{indent}{key}: {nested_string}")
+          else:
+              strings.append(f"{indent}{key}: {value}")
+  elif isinstance(obj, list):
+      for idx, item in enumerate(obj):
+          nested_string = dict_to_string(item, level + 1)
+          strings.append(f"{indent}Item {idx + 1}: {nested_string}")
+  else:
+      strings.append(f"{indent}{obj}")
+
+  return ", ".join(strings)
 
 def ask_ai(profile,question):
   TWEAKS = {
@@ -18,7 +38,7 @@ def ask_ai(profile,question):
       "input_value": question
     },
     "TextInput-0RtcB": {
-      "input_value": profile
+      "input_value": dict_to_string(profile)
     },
   }
 
@@ -28,17 +48,14 @@ def ask_ai(profile,question):
                               tweaks=TWEAKS)
   return result[0].outputs[0].results["text"].data["text"]
 
-
-
-
 def get_macros(profile,goals):
 
   TWEAKS = {
     "TextInput-Md4Dc": {
-      "input_value": goals
+      "input_value": ", ".join(goals)
     },
     "TextInput-kbKmV": {
-      "input_value": profile
+      "input_value": dict_to_string(profile)
     },
   }
 
@@ -63,7 +80,7 @@ def run_flow(message: str,
         headers = {"Authorization": "Bearer " + application_token, "Content-Type": "application/json"}
     response = requests.post(api_url, json=payload, headers=headers)
 
-    return response.json()["outputs"][0]["outputs"][0]["results"]["text"]["data"]["text"]
+    return json.loads(response.json()["outputs"][0]["outputs"][0]["results"]["text"]["data"]["text"])
 
 
 result = get_macros("name:John Age:24 Weight:75kg, 175cms","muscle gain")
