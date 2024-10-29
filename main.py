@@ -2,9 +2,9 @@ import streamlit as st
 from profiles import create_profile, get_notes, get_profile
 from form_submit import update_personal_info, add_note, delete_note
 from ai import ask_ai, get_macros
+import uuid
 
 st.title('Personal Fitness Tool')
-
 
 @st.fragment()
 def peronal_data_form():
@@ -128,14 +128,18 @@ def ask_ai_func():
     user_question = st.text_input("Ask AI a question")
     if st.button("Ask AI"):
         with st.spinner():
-            print(st.session_state.profile)
-            result = ask_ai(st.session_state.profile, user_question)
+            notes = "\n".join([note["text"] for note in st.session_state.notes])
+            print(notes)
+            result = ask_ai(st.session_state.profile, user_question, notes)
             st.write(result)
 
 
 def forms():
+    if "profile_id" not in st.session_state:
+        st.session_state.profile_id = str(uuid.uuid4())
+
     if "profile" not in st.session_state:
-        profile_id = 1
+        profile_id = st.session_state.profile_id
         profile = get_profile(profile_id)
 
         if not profile:

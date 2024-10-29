@@ -13,59 +13,65 @@ APPLICATION_TOKEN = os.getenv("LANGFLOW_TOKEN")
 
 
 def dict_to_string(obj, level=0):
-  strings = []
-  indent = "  " * level
-  
-  if isinstance(obj, dict):
-      for key, value in obj.items():
-          if isinstance(value, (dict, list)):
-              nested_string = dict_to_string(value, level + 1)
-              strings.append(f"{indent}{key}: {nested_string}")
-          else:
-              strings.append(f"{indent}{key}: {value}")
-  elif isinstance(obj, list):
-      for idx, item in enumerate(obj):
-          nested_string = dict_to_string(item, level + 1)
-          strings.append(f"{indent}Item {idx + 1}: {nested_string}")
-  else:
-      strings.append(f"{indent}{obj}")
+    strings = []
+    indent = "  " * level
 
-  return ", ".join(strings)
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if isinstance(value, (dict, list)):
+                nested_string = dict_to_string(value, level + 1)
+                strings.append(f"{indent}{key}: {nested_string}")
+            else:
+                strings.append(f"{indent}{key}: {value}")
+    elif isinstance(obj, list):
+        for idx, item in enumerate(obj):
+            nested_string = dict_to_string(item, level + 1)
+            strings.append(f"{indent}Item {idx + 1}: {nested_string}")
+    else:
+        strings.append(f"{indent}{obj}")
 
-def ask_ai(profile,question):
-  TWEAKS = {
-    "TextInput-WKjLi": {
-      "input_value": question
-    },
-    "TextInput-0RtcB": {
-      "input_value": dict_to_string(profile)
-    },
-  }
+    return ", ".join(strings)
 
-  result = run_flow_from_json(flow="AskAI.json",
-                              input_value="message",
-                              fallback_to_env_vars=True,
-                              tweaks=TWEAKS)
-  return result[0].outputs[0].results["text"].data["text"]
 
-def get_macros(profile,goals):
+def ask_ai(profile, question, notes):
+    TWEAKS = {
+        "TextInput-WKjLi": {
+            "input_value": question
+        },
+        "TextInput-0RtcB": {
+            "input_value": dict_to_string(profile)
+        },
+        "TextInput-W8m9q": {
+            "input_value": notes
+        }
+    }
 
-  TWEAKS = {
-    "TextInput-Md4Dc": {
-      "input_value": ", ".join(goals)
-    },
-    "TextInput-kbKmV": {
-      "input_value": dict_to_string(profile)
-    },
-  }
+    result = run_flow_from_json(flow="AskAI.json",
+                                input_value="message",
+                                fallback_to_env_vars=True,
+                                tweaks=TWEAKS)
+    return result[0].outputs[0].results["text"].data["text"]
 
-  return run_flow("",tweaks=TWEAKS,application_token=APPLICATION_TOKEN)
+
+def get_macros(profile, goals):
+
+    TWEAKS = {
+        "TextInput-Md4Dc": {
+            "input_value": ", ".join(goals)
+        },
+        "TextInput-kbKmV": {
+            "input_value": dict_to_string(profile)
+        },
+    }
+
+    return run_flow("", tweaks=TWEAKS, application_token=APPLICATION_TOKEN)
+
 
 def run_flow(message: str,
-  output_type: str = "chat",
-  input_type: str = "chat",
-  tweaks: Optional[dict] = None,
-  application_token: Optional[str] = None) -> dict:
+             output_type: str = "chat",
+             input_type: str = "chat",
+             tweaks: Optional[dict] = None,
+             application_token: Optional[str] = None) -> dict:
     api_url = f"{BASE_API_URL}/lf/{LANGFLOW_ID}/api/v1/run/macros"
 
     payload = {
@@ -77,11 +83,8 @@ def run_flow(message: str,
     if tweaks:
         payload["tweaks"] = tweaks
     if application_token:
-        headers = {"Authorization": "Bearer " + application_token, "Content-Type": "application/json"}
+        headers = {"Authorization": "Bearer " +
+                   application_token, "Content-Type": "application/json"}
     response = requests.post(api_url, json=payload, headers=headers)
 
     return json.loads(response.json()["outputs"][0]["outputs"][0]["results"]["text"]["data"]["text"])
-
-
-result = get_macros("name:John Age:24 Weight:75kg, 175cms","muscle gain")
-print(result)
